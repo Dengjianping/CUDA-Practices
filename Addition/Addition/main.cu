@@ -66,8 +66,8 @@ int main()
 	cudaMemcpy(d_b, b, size, cudaMemcpyHostToDevice);
 	
 	// define threads and blocks
-	dim3 threadPerBlock(1, 1);
-	dim3 blockSize(2, 2);
+	dim3 threadPerBlock(1);
+	dim3 blockSize(10);
 
 	addition<<<blockSize, threadPerBlock>>> (d_c, d_a, d_b);
 
