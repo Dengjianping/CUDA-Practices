@@ -11,14 +11,14 @@
 #include <ctime>
 
 using namespace std;
-const int row = 2;
-const int col = 2;
 
-__global__ void addition(int *c,const int *a, const int *b)
+__global__ void addition(int *c,const int *a, const int *b, const int N)
 {
 	int i = blockDim.x*blockIdx.x + threadIdx.x;
-
-	c[i] = a[i] + b[i];
+	if (i < N)
+	{
+		c[i] = a[i] + b[i];
+	}
 }
 
 int generateRandomNum(bool bigger)
@@ -43,14 +43,15 @@ void initVec(vector<int> & a, bool bigger==false)
 
 int main()
 {
+	const int N = 10000;
 	// host data
-	vector<int> a(10, 0);
+	vector<int> a(N, 0);
 	initVec(a);
 	
-	vector<int> b(10, 0);
+	vector<int> b(N, 0);
 	initVec(b, true);
 	
-	vector<int> c(10, 0);
+	vector<int> c(N, 0);
 	
 	int size = a.size() * sizeof(int);
 	
