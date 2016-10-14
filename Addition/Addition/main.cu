@@ -40,7 +40,7 @@ int main()
 	dim3 threadPerBlock(1, 1);
 	dim3 blockSize(2, 2);
 
-	addition<<<4, 1 >>> (d_c, d_a, d_b);
+	addition<<<blockSize, threadPerBlock>>> (d_c, d_a, d_b);
 
 	cudaMemcpy(d_c, c, size, cudaMemcpyDeviceToDevice);
 	// memory free
