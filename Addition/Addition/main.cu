@@ -2,15 +2,19 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <ctime>
 
 using namespace std;
 const int row = 2;
 const int col = 2;
 
-__global__ void addition(int c[row][col],const int a[row][col], const int b[row][col])
+__global__ void addition(int *c,const int *a, const int *b)
 {
 	int i = blockDim.y*blockIdx.y + threadIdx.y;
 	int j = blockDim.x*blockIdx.x + threadIdx.x;
@@ -18,16 +22,41 @@ __global__ void addition(int c[row][col],const int a[row][col], const int b[row]
 	c[i][j] = a[i][j] + b[i][j];
 }
 
+int generateRandomNum(bool bigger)
+{
+	if (!bigger)
+	{
+		return rand() % 10;		
+	}
+	else 
+	{
+		return rand() % 100;
+	}
+}
+
+void initVec(vector<int> & a, bool bigger==false)
+{
+	for (int i = 0; i < a.size(); i++)
+	{
+		a[i] = generateRandomNum(bigger);
+	}
+}
+
 int main()
 {
 	// host data
-	int a[row][col] = { { 1,2 },{ 3,4 } };
-	int b[row][col] = { { 1,2 },{ 3,4 } };
-	int c[row][col];
-	int size = sizeof(a);
-
+	vector<int> a(10, 0);
+	initVec(a);
+	
+	vector<int> b(10, 0);
+	initVec(b, true);
+	
+	vector<int> c(10, 0);
+	
+	int size = a.size() * sizeof(int);
+	
 	// device data
-	int d_a[row][col], d_b[row][col], d_c[row][col];
+	int *d_a, *d_b, *d_c;
 	cudaMalloc((void **)&d_a, size);
 	cudaMalloc((void **)&d_b, size);
 	cudaMalloc((void **)&d_c, size);
