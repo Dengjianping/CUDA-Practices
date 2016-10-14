@@ -1,1 +1,1 @@
-Just a addtion running on GPU device.
+Just a array addtion running on GPU device.
