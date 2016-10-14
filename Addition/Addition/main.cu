@@ -16,10 +16,9 @@ const int col = 2;
 
 __global__ void addition(int *c,const int *a, const int *b)
 {
-	int i = blockDim.y*blockIdx.y + threadIdx.y;
-	int j = blockDim.x*blockIdx.x + threadIdx.x;
+	int i = blockDim.x*blockIdx.x + threadIdx.x;
 
-	c[i][j] = a[i][j] + b[i][j];
+	c[i] = a[i] + b[i];
 }
 
 int generateRandomNum(bool bigger)
