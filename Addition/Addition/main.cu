@@ -2,54 +2,83 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <ctime>
 
 using namespace std;
-const int row = 2;
-const int col = 2;
 
-__global__ void addition(int c[row][col],const int a[row][col], const int b[row][col])
+__global__ void addition(int *c,const int *a, const int *b, const int N)
 {
-	int i = blockDim.y*blockIdx.y + threadIdx.y;
-	int j = blockDim.x*blockIdx.x + threadIdx.x;
+    int i = blockDim.x*blockIdx.x + threadIdx.x;
+    if (i < N)
+    {
+        c[i] = a[i] + b[i];
+    }
+}
 
-	c[i][j] = a[i][j] + b[i][j];
+int generateRandomNum(bool bigger)
+{
+    if (!bigger)
+    {
+        return rand() % 10;     
+    }
+    else 
+    {
+        return rand() % 100;
+    }
+}
+
+void initVec(vector<int> & a, bool bigger==false)
+{
+    for (int i = 0; i < a.size(); i++)
+    {
+        a[i] = generateRandomNum(bigger);
+    }
 }
 
 int main()
 {
-	// host data
-	int a[row][col] = { { 1,2 },{ 3,4 } };
-	int b[row][col] = { { 1,2 },{ 3,4 } };
-	int c[row][col];
-	int size = sizeof(a);
+    const int N = 10000;
+    // host data
+    vector<int> a(N, 0);
+    initVec(a);
+    
+    vector<int> b(N, 0);
+    initVec(b, true);
+    
+    vector<int> c(N, 0);
+    
+    int size = a.size() * sizeof(int);
+    
+    // device data
+    int *d_a, *d_b, *d_c;
+    cudaMalloc((void **)&d_a, size);
+    cudaMalloc((void **)&d_b, size);
+    cudaMalloc((void **)&d_c, size);
 
-	// device data
-	int d_a[row][col], d_b[row][col], d_c[row][col];
-	cudaMalloc((void **)&d_a, size);
-	cudaMalloc((void **)&d_b, size);
-	cudaMalloc((void **)&d_c, size);
+    // copy data to device from host
+    cudaMemcpy(d_a, a, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, b, size, cudaMemcpyHostToDevice);
+    
+    // define threads and blocks
+    dim3 threadPerBlock(1);
+    dim3 blockSize(10);
 
-	// copy data to device from host
-	cudaMemcpy(d_a, a, size, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_b, b, size, cudaMemcpyHostToDevice);
-	
-	// define threads and blocks
-	dim3 threadPerBlock(1, 1);
-	dim3 blockSize(2, 2);
+    addition<<<blockSize, threadPerBlock>>> (d_c, d_a, d_b);
 
-	addition<<<4, 1 >>> (d_c, d_a, d_b);
+    cudaMemcpy(d_c, c, size, cudaMemcpyDeviceToDevice);
+    // memory free
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_c);
 
-	cudaMemcpy(d_c, c, size, cudaMemcpyDeviceToDevice);
-	// memory free
-	cudaFree(d_a);
-	cudaFree(d_b);
-	cudaFree(d_c);
+    cout << c[1][1] << c[1][0] << endl;
+    system("pause");
 
-	cout << c[1][1] << c[1][0] << endl;
-	system("pause");
-
-	return 0;
+    return 0;
 }
