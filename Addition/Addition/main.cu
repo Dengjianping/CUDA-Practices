@@ -14,71 +14,71 @@ using namespace std;
 
 __global__ void addition(int *c,const int *a, const int *b, const int N)
 {
-	int i = blockDim.x*blockIdx.x + threadIdx.x;
-	if (i < N)
-	{
-		c[i] = a[i] + b[i];
-	}
+    int i = blockDim.x*blockIdx.x + threadIdx.x;
+    if (i < N)
+    {
+        c[i] = a[i] + b[i];
+    }
 }
 
 int generateRandomNum(bool bigger)
 {
-	if (!bigger)
-	{
-		return rand() % 10;		
-	}
-	else 
-	{
-		return rand() % 100;
-	}
+    if (!bigger)
+    {
+        return rand() % 10;     
+    }
+    else 
+    {
+        return rand() % 100;
+    }
 }
 
 void initVec(vector<int> & a, bool bigger==false)
 {
-	for (int i = 0; i < a.size(); i++)
-	{
-		a[i] = generateRandomNum(bigger);
-	}
+    for (int i = 0; i < a.size(); i++)
+    {
+        a[i] = generateRandomNum(bigger);
+    }
 }
 
 int main()
 {
-	const int N = 10000;
-	// host data
-	vector<int> a(N, 0);
-	initVec(a);
-	
-	vector<int> b(N, 0);
-	initVec(b, true);
-	
-	vector<int> c(N, 0);
-	
-	int size = a.size() * sizeof(int);
-	
-	// device data
-	int *d_a, *d_b, *d_c;
-	cudaMalloc((void **)&d_a, size);
-	cudaMalloc((void **)&d_b, size);
-	cudaMalloc((void **)&d_c, size);
+    const int N = 10000;
+    // host data
+    vector<int> a(N, 0);
+    initVec(a);
+    
+    vector<int> b(N, 0);
+    initVec(b, true);
+    
+    vector<int> c(N, 0);
+    
+    int size = a.size() * sizeof(int);
+    
+    // device data
+    int *d_a, *d_b, *d_c;
+    cudaMalloc((void **)&d_a, size);
+    cudaMalloc((void **)&d_b, size);
+    cudaMalloc((void **)&d_c, size);
 
-	// copy data to device from host
-	cudaMemcpy(d_a, a, size, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_b, b, size, cudaMemcpyHostToDevice);
-	
-	// define threads and blocks
-	dim3 threadPerBlock(1);
-	dim3 blockSize(10);
+    // copy data to device from host
+    cudaMemcpy(d_a, a, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, b, size, cudaMemcpyHostToDevice);
+    
+    // define threads and blocks
+    dim3 threadPerBlock(1);
+    dim3 blockSize(10);
 
-	addition<<<blockSize, threadPerBlock>>> (d_c, d_a, d_b);
+    addition<<<blockSize, threadPerBlock>>> (d_c, d_a, d_b);
 
-	cudaMemcpy(d_c, c, size, cudaMemcpyDeviceToDevice);
-	// memory free
-	cudaFree(d_a);
-	cudaFree(d_b);
-	cudaFree(d_c);
+    cudaMemcpy(d_c, c, size, cudaMemcpyDeviceToDevice);
+    // memory free
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_c);
 
-	cout << c[1][1] << c[1][0] << endl;
-	system("pause");
+    cout << c[1][1] << c[1][0] << endl;
+    system("pause");
 
-	return 0;
+    return 0;
 }
