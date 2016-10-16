@@ -97,7 +97,7 @@ int main()
 
     cudaEventSynchronize(stop);
     
-    cudaEventElapsedTime(&deviceTimeCost, start, stop);
+    cudaEventElapsedTime(&deviceTimeCost, start, stop); // friendly warning here returns in millisecond
     //destroy all event
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
@@ -108,15 +108,15 @@ int main()
     cudaFree(d_b);
     cudaFree(d_c);
 
-    cout << "Time Consumed on GPU: " << deviceTimeCost << endl;
+    cout << "Time Consumed on GPU: " << deviceTimeCost << " ms." << endl;
 
     auto hostStart = chrono::steady_clock::now();
     arrayAdditionOnCPU(d, a, b, N);
     auto hostEnd = chrono::steady_clock::now();
-    float hostTimeCost = chrono::duration_cast<chrono::duration<float> >(hostEnd - hostStart).count();
-    cout << "Time Consumed on Host: " << hostTimeCost << endl;
+    float hostTimeCost = chrono::duration_cast<chrono::duration<float> >(hostEnd - hostStart).count(); // in seconds
+    cout << "Time Consumed on Host: " << hostTimeCost << " s." << endl;
 
-    cout << "who is faster: " << deviceTimeCost / hostTimeCost << endl;
+    cout << "who is faster: " << deviceTimeCost / (1000*1000*hostTimeCost) << endl;
 
     //showArray(c, N);
     system("pause");
