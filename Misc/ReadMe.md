@@ -1,5 +1,5 @@
 1. 	cudaMemcpyAsync(), function is a non-blocking variant of cudaMemcpy() in which control is returned immediately to the host thread.
-	```c
+	```cpp
 	cudaMemcpyAsync(a_d, a_h, size, cudaMemcpyHostToDevice, 0);
 	kernel<<<grid, block>>>(a_d);
 	cpuFunction();
@@ -22,7 +22,7 @@
 	kernel<<<N/nThreads, nThreads>>>(a_d);
 	```
 4. 	Staged concurrent copy and execute
-	```c
+	```cpp
 	for (i=0; i<nStreams; i++) {
 		offset = i*N/nStreams;
 		cudaMemcpyAsync(a_d+offset, a_h+offset, size, dir, stream[i]);
