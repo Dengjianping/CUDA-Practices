@@ -1,12 +1,12 @@
 1. cudaMemcpyAsync(), function is a non-blocking variant of cudaMemcpy() in which control is returned immediately to the host thread.
-   ```c++
+   ```c
    cudaMemcpyAsync(a_d, a_h, size, cudaMemcpyHostToDevice, 0);
    kernel<<<grid, block>>>(a_d);
    cpuFunction();
    ```
    The last argument to the cudaMemcpyAsync() function is the stream ID, which in this case uses the default stream, stream 0.
 2. Concurrent copy and execute
-   ```c++
+   ```c
    cudaStream_t stream1, stream2;
    cudaStreamCreate(&stream1);
    cudaStreamCreate(&stream2);
@@ -23,7 +23,7 @@
    kernel<<<N/nThreads, nThreads>>>(a_d);
    ```
 4. Staged concurrent copy and execute
-   ```c++
+   ```c
    for (i=0; i<nStreams; i++) {
    offset = i*N/nStreams;
    cudaMemcpyAsync(a_d+offset, a_h+offset, size, dir, stream[i]);
