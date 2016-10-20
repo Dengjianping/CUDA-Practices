@@ -2,11 +2,10 @@
 
 ## Hello Markdown!
 ### Hi there.
-
-**Markdown** is bold text
-*Markdown* is italic text
-~~Markdown~~ is striked
-**_Markdown_** is bold and italic text
+**Markdown** is bold text.
+*Markdown* is italic text.
+~~Markdown~~ is striked.
+**_Markdown_** is bold and italic text.
 
 # Quoting code
 ```
