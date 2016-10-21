@@ -9,18 +9,18 @@
 
 using namespace std;
 
-const int N = 2;
+const int N = 3;
 
 __global__ void add(int *a, int N)
 {
     int i = blockDim.x*blockIdx.x + threadIdx.x;
     if (i < N)
     {
-        a[i] = a[i] + 4;
+        a[i] = a[i] + N;
     }
 }
 
-void showArray(int a[][2], const int N)
+void showArray(int a[][3], const int N)
 {
     cout << "show array: ";
     for (size_t i = 0; i < N; i++)
@@ -47,21 +47,21 @@ void run(cudaStream_t & stream, int *a, const int N)
     int size = N * sizeof(int);
 
     // blocks and threads
-    dim3 blocks(1);
-    dim3 threads(1);
+    dim3 blocks(N);
+    dim3 threads(N);
 
     cudaMalloc((void **)&d_a, size);
     cudaStream_t copy;
     cudaStreamCreateWithFlags(&copy, cudaStreamNonBlocking);
     cudaMemcpyAsync(d_a, a, size, cudaMemcpyHostToDevice, copy); // asynchronizely copy data to device
+
+    while (cudaStreamQuery(copy) != cudaSuccess)
+    {}
+    /*the same as using this api to hold here: 
     cudaStreamSynchronize(copy);
-
-    if (cudaStreamQuery(copy) == cudaSuccess)
-    {
-        cout << "stream" << endl;
-        add<<<blocks, threads, 0, stream>>> (d_a, N);
-    }
-
+    */
+    
+    add<<<blocks, threads, 0, stream>>> (d_a, N);
     cudaStreamSynchronize(stream); // wait for stream done
     cudaMemcpy(a, d_a, size, cudaMemcpyDeviceToHost);
     cudaFree(d_a);
@@ -74,8 +74,7 @@ int main()
     thrust::host_vector<cudaStream_t> streams;
     initStreams(streams, N);
 
-    int a[N][N] = { {1,2},{4,5} };
-    //initArray(a, N);
+    int a[N][N] = { {1,2,3},{4,5,6},{7,8,9} };
 
     for (size_t i = 0; i < streams.size(); i++)
     {
