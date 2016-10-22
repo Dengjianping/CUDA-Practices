@@ -1,3 +1,5 @@
+![cuda](cuda.jpg)
+
 # Headings
 
 ## Hello Markdown!
