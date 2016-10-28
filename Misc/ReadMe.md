@@ -33,3 +33,5 @@ for (i=0; i<nStreams; i++) {
 ```
   Staged concurrent copy and execute shows how the transfer and kernel execution can
   be broken up into nStreams stages. This approach permits some overlapping of the data transfer and execution.
+  
+  https://zhuanlan.zhihu.com/p/23185164
