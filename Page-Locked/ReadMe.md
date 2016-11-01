@@ -25,6 +25,7 @@ if (!prop.canMapHostMemory)
     printf("your device doesn't support mapped memory");
 }
 cudaHostAlloc(&h_a, size, cudaHostAllocMapped);
+cudaHostGetDevicePointer(&d_a, h_a, 0);
 /*
 your code stuff
 */
