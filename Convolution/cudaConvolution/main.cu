@@ -7,12 +7,12 @@
 
 using namespace std;
 
-__global__ void convolution1D(int *d_input1D, const int P, int *d_kernel1D, const int M, int *d_output1D, const int warp)
+__global__ void convolution1D(int *d_input1D, const int P, int *d_kernel1D, const int M, int *d_output1D)
 {
     int row = blockDim.y*blockIdx.y + threadIdx.y;
     int col = blockDim.x*blockIdx.x + threadIdx.x;
 
-    int index = row*warp + col;
+    int index = row*blockDim.x + col;
     printf("index: %d\n", index);
     extern __shared__ int sharedInput1D[];
     if (index < P)
@@ -33,7 +33,7 @@ __global__ void convolution1D(int *d_input1D, const int P, int *d_kernel1D, cons
     {
         for (size_t i = 0; i < M; i++)
         {
-            d_output1D[index + i] += d_kernel1D[i] * d_input1D[index];
+            d_output1D[index + i] += sharedKernel1D[i] * sharedInput1D[index];
         }
     }
 }
@@ -88,7 +88,7 @@ int main()
     cout << "size: " << size << endl;
     dim3 block1D(1);
     dim3 thread1D(2, size / 2);
-    convolution1D<<<block1D,thread1D>>>(d_input1D, P, d_kernel1D, M, d_output1D, warp);
+    convolution1D<<<block1D,thread1D>>>(d_input1D, P, d_kernel1D, M, d_output1D);
 
     cudaDeviceSynchronize();
 
