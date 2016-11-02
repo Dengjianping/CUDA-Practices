@@ -76,7 +76,8 @@ int main()
     int *d_b;
     cudaMallocPitch(&d_b, &pitch_b, N * sizeof(int), M);
     cudaMemcpy2DAsync(d_b, pitch_b, h_b, N * sizeof(int), N * sizeof(int), M, cudaMemcpyHostToDevice, stream_b);
-
+	
+	// ensure data copy is completed
     cudaStreamSynchronize(stream_a); cudaStreamSynchronize(stream_b); cudaStreamSynchronize(stream_c);
 
     dim3 blockSize(1);
