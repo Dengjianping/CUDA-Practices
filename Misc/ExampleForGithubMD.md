@@ -13,7 +13,7 @@
 ```
 git init
 git add
-git commi
+git commit
 ```
 
 # Make text linked
