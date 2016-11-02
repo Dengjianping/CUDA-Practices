@@ -1,4 +1,4 @@
-# Matrix Multiplication
+# Convolution
 
 ## Running Project
 ```
