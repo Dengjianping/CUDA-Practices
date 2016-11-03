@@ -41,12 +41,39 @@ __global__ void convolution1D(int *d_input1D, const int P, int *d_kernel1D, cons
     }
 }
 
-__global__ void convolution2D(deviceMatrix & d_input2D, deviceMatrix & d_kernel2D, deviceMatrix & d_output2D)
+__global__ void convolution2D(int *d_input2D, size_t inputPitch, const int P, const int Q, int *d_kernel2D, size_t kernelPitch, const int M, const int N, int *d_output2D, size_t outputPitch)
 {
     int row = blockDim.y*blockIdx.y + threadIdx.y;
     int col = blockDim.x*blockIdx.x + threadIdx.x;
 
-    int index = row*blockDim.x + col;
+    __shared__ int kernel[3][4];
+    __shared__ int input[10][10];
+
+    // load input data to share memory
+    if (row < P&&col < Q)
+    {
+        int *sharedInput = (int *)((char *)d_input2D, +row*inputPitch) + col;
+        input[row][col] = *sharedInput;
+    }
+
+    // load kernel data to share memory
+    if (row < M&&col < N)
+    {
+        int *sharedKernel = (int *)((char *)d_kernel2D, +row*kernelPitch) + col;
+        input[row][col] = *sharedKernel;
+        __syncthreads();
+    }
+
+    if (row < P&&col < Q)
+    {
+        for (size_t i = 0; i < M; i++)
+        {
+            for (size_t j = 0; j < N; j++)
+            {
+                
+            }
+        }
+    }
 }
 
 void initArray(int *a, const int N)
@@ -78,6 +105,54 @@ void initMatrix(thrust::host_vector<thrust::host_vector<int> > & input, const in
         }
         input.push_back(tmp);
     }
+}
+
+void showMatrix(thrust::host_vector<thrust::host_vector<int> > & input, const int Row, const int Col)
+{
+    for (size_t i = 0; i < Row; i++)
+    {
+        for (size_t j = 0; j < Col; j++)
+        {
+            cout << input[i][j] << ", ";
+        }
+        cout << endl;
+    }
+}
+
+void run()
+{
+    cudaStream_t kernlStream, inputStream, outputStream;
+    cudaStreamCreate(&kernlStream); cudaStreamCreate(&inputStream); cudaStreamCreate(&outputStream);
+    // copy kernel data to device
+    const int M = 3, N = 4;
+    int kernel2D[M][N] = { {} };
+    int *d_kernel2D;
+    size_t kernelPitch;
+    cudaMallocPitch(&d_kernel2D, &kernelPitch, N * sizeof(int), M);
+    cudaMemcpy2DAsync(d_kernel2D, kernelPitch, kernel2D, N * sizeof(int), N * sizeof(int), M, cudaMemcpyHostToDevice, kernlStream);
+
+    // copy input data to device
+    const int P = 10, Q = 10;
+    int input2D[P][Q] = { {} };
+    int *d_input2D;
+    size_t inputPitch;
+    cudaMallocPitch(&d_input2D, &inputPitch, Q * sizeof(int), P);
+    cudaMemcpy2DAsync(d_input2D, inputPitch, input2D, Q * sizeof(int), Q * sizeof(int), P, cudaMemcpyHostToDevice, inputStream);
+
+    // init output data
+    static int output2D[P + M - 1][Q + N - 1] = { {} };
+    int *d_output2D;
+    size_t outputPitch;
+    cudaMallocPitch(&d_output2D, &outputPitch, Q * sizeof(int), P + M - 1);
+    cudaMemcpy2DAsync(d_output2D, outputPitch, output2D, (Q + N - 1) * sizeof(int), (Q + N - 1) * sizeof(int), P + M - 1, cudaMemcpyHostToDevice, outputStream);
+
+    // hold here to wait for all data is tansfered completely
+    cudaStreamSynchronize(kernlStream); cudaStreamSynchronize(inputStream); cudaStreamSynchronize(outputStream);
+
+    // define block size and thread size
+    dim3 blockSize(1);
+    dim3 threadSize(32, 32);
+
 }
 
 int main()
@@ -125,9 +200,11 @@ int main()
 
     hostMatrix kernel2D, input2D, output2D;
     initMatrix(kernel2D, M, N); initMatrix(input2D, P, Q);
+    showMatrix(kernel2D, M, N);
 
     deviceMatrix d_kernel2D, d_input2D, d_output2D;
     d_kernel2D = kernel2D, d_input2D = input2D;
+    
 
     system("pause");
     return 0;
