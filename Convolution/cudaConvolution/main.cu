@@ -70,7 +70,8 @@ __global__ void convolution2D(int *d_input2D, size_t inputPitch, const int P, co
         {
             for (size_t j = 0; j < N; j++)
             {
-                
+                int *sharedOutput = (int *)((char *)d_output2D + (row+i)*outputPitch) + (col+j);
+                *sharedOutput += kernel[i][j] * input[row][col];
             }
         }
     }
@@ -137,13 +138,14 @@ void run()
     int *d_input2D;
     size_t inputPitch;
     cudaMallocPitch(&d_input2D, &inputPitch, Q * sizeof(int), P);
+    // about how to calculate source pitch size, see offcial document
     cudaMemcpy2DAsync(d_input2D, inputPitch, input2D, Q * sizeof(int), Q * sizeof(int), P, cudaMemcpyHostToDevice, inputStream);
 
     // init output data
     static int output2D[P + M - 1][Q + N - 1] = { {} };
     int *d_output2D;
     size_t outputPitch;
-    cudaMallocPitch(&d_output2D, &outputPitch, Q * sizeof(int), P + M - 1);
+    cudaMallocPitch(&d_output2D, &outputPitch, (Q + N - 1) * sizeof(int), P + M - 1);
     cudaMemcpy2DAsync(d_output2D, outputPitch, output2D, (Q + N - 1) * sizeof(int), (Q + N - 1) * sizeof(int), P + M - 1, cudaMemcpyHostToDevice, outputStream);
 
     // hold here to wait for all data is tansfered completely
@@ -152,7 +154,15 @@ void run()
     // define block size and thread size
     dim3 blockSize(1);
     dim3 threadSize(32, 32);
-
+    convolution2D<<<blockSize, threadSize>>>(d_input2D, inputPitch, P, Q, d_kernel2D, kernelPitch, M, N, d_output2D, outputPitch);
+    
+    // hold host execution until device compution finish
+    cudaDeviceSynchronize();
+    cudaMemcpy2D(output2D, (Q + N - 1) * sizeof(int), d_input2D, outputPitch, (Q + N - 1) * sizeof(int), P + M - 1, cudaMemcpyDeviceToHost);
+    
+    // clean up
+    cudaFree(d_input2D); cudaFree(d_kernel2D); cudaFree(d_output2D);
+    cudaStreamDestroy(kernlStream); cudaStreamDestroy(inputStream); cudaStreamDestroy(outputStream);
 }
 
 int main()
