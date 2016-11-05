@@ -1,5 +1,5 @@
-
 #include "cuda_runtime.h"
+#include "cuda.h"
 #include "device_launch_parameters.h"
 #include "thrust/device_vector.h"
 #include "thrust/host_vector.h"
@@ -43,34 +43,35 @@ __global__ void convolution1D(int *d_input1D, const int P, int *d_kernel1D, cons
 
 __global__ void convolution2D(int *d_input2D, size_t inputPitch, const int P, const int Q, int *d_kernel2D, size_t kernelPitch, const int M, const int N, int *d_output2D, size_t outputPitch)
 {
+    __shared__ int kernel[3][4];
+    __shared__ int input[4][4];
+
     int row = blockDim.y*blockIdx.y + threadIdx.y;
     int col = blockDim.x*blockIdx.x + threadIdx.x;
 
-    __shared__ int kernel[3][4];
-    __shared__ int input[10][10];
-
-    // load input data to share memory
     if (row < P&&col < Q)
     {
-        int *sharedInput = (int *)((char *)d_input2D, +row*inputPitch) + col;
+        // load kernel data to share memory
+        if (row < M&&col < N)
+        {
+            int *sharedKernel = (int *)((char *)d_kernel2D +row*kernelPitch) + col;
+            kernel[row][col] = *sharedKernel;
+            __syncthreads();
+        }
+
+        // load input data to share memory
+        int *sharedInput = (int *)((char *)d_input2D +row*inputPitch) + col;
         input[row][col] = *sharedInput;
-    }
-
-    // load kernel data to share memory
-    if (row < M&&col < N)
-    {
-        int *sharedKernel = (int *)((char *)d_kernel2D, +row*kernelPitch) + col;
-        input[row][col] = *sharedKernel;
         __syncthreads();
-    }
 
-    if (row < P&&col < Q)
-    {
+
+        // convolving
+        int r = 0, c = 0;
         for (size_t i = 0; i < M; i++)
         {
             for (size_t j = 0; j < N; j++)
             {
-                int *sharedOutput = (int *)((char *)d_output2D + (row+i)*outputPitch) + (col+j);
+                int *sharedOutput = (int *)((char *)d_output2D + (row + i)*outputPitch) + (col + j);
                 *sharedOutput += kernel[i][j] * input[row][col];
             }
         }
@@ -94,47 +95,22 @@ void showArray(int *a, const int N)
     cout << endl;
 }
 
-void initMatrix(thrust::host_vector<thrust::host_vector<int> > & input, const int Row, const int Col)
-{
-    for (size_t i = 0; i < Row; i++)
-    {
-        thrust::host_vector<int> tmp;
-        for (size_t j = 0; j < Col; j++)
-        {
-            int t = rand() % 20;
-            tmp.push_back(t);
-        }
-        input.push_back(tmp);
-    }
-}
-
-void showMatrix(thrust::host_vector<thrust::host_vector<int> > & input, const int Row, const int Col)
-{
-    for (size_t i = 0; i < Row; i++)
-    {
-        for (size_t j = 0; j < Col; j++)
-        {
-            cout << input[i][j] << ", ";
-        }
-        cout << endl;
-    }
-}
-
 void run()
 {
     cudaStream_t kernlStream, inputStream, outputStream;
     cudaStreamCreate(&kernlStream); cudaStreamCreate(&inputStream); cudaStreamCreate(&outputStream);
     // copy kernel data to device
     const int M = 3, N = 4;
-    int kernel2D[M][N] = { {} };
+    //int kernel2D[M][N] = { { 1,2,3,4 },{ 3,4,5,6 },{ 6,7,8,9 } };
+    int kernel2D[M][N] = { {1,2,3,4}, {3,4,5,6},{6,7,8,9} };
     int *d_kernel2D;
     size_t kernelPitch;
     cudaMallocPitch(&d_kernel2D, &kernelPitch, N * sizeof(int), M);
     cudaMemcpy2DAsync(d_kernel2D, kernelPitch, kernel2D, N * sizeof(int), N * sizeof(int), M, cudaMemcpyHostToDevice, kernlStream);
 
     // copy input data to device
-    const int P = 10, Q = 10;
-    int input2D[P][Q] = { {} };
+    const int P = 4, Q = 4;
+    int input2D[P][Q] = { { 1,2,3,4 },{ 3,4,5,6 },{ 6,7,8,9 },{10,3,7,6 } };
     int *d_input2D;
     size_t inputPitch;
     cudaMallocPitch(&d_input2D, &inputPitch, Q * sizeof(int), P);
@@ -153,16 +129,33 @@ void run()
 
     // define block size and thread size
     dim3 blockSize(1);
-    dim3 threadSize(32, 32);
+    dim3 threadSize(8, 8);
     convolution2D<<<blockSize, threadSize>>>(d_input2D, inputPitch, P, Q, d_kernel2D, kernelPitch, M, N, d_output2D, outputPitch);
+    cudaError_t error = cudaDeviceSynchronize();
+    if (error != cudaSuccess)
+    {
+        cout << cudaGetErrorString(error) << endl;
+    }
     
     // hold host execution until device compution finish
-    cudaDeviceSynchronize();
-    cudaMemcpy2D(output2D, (Q + N - 1) * sizeof(int), d_input2D, outputPitch, (Q + N - 1) * sizeof(int), P + M - 1, cudaMemcpyDeviceToHost);
+    error = cudaMemcpy2D(output2D, (Q + N - 1) * sizeof(int), d_output2D, outputPitch, (Q + N - 1) * sizeof(int), P + M - 1, cudaMemcpyDeviceToHost);
+    if (error != cudaSuccess)
+    {
+        cout << cudaGetErrorString(error) << endl;
+    }
     
     // clean up
     cudaFree(d_input2D); cudaFree(d_kernel2D); cudaFree(d_output2D);
     cudaStreamDestroy(kernlStream); cudaStreamDestroy(inputStream); cudaStreamDestroy(outputStream);
+
+    for (size_t i = 0; i < P+M-1; i++)
+    {
+        for (size_t j = 0; j < Q+N-1; j++)
+        {
+            cout << output2D[i][j] << ", ";
+        }
+        cout << endl;
+    }
 }
 
 int main()
@@ -177,6 +170,7 @@ int main()
     int *d_kernel1D;
     cudaHostAlloc(&kernel1D, M * sizeof(int), cudaHostAllocMapped); // make sure your device support host memory map device
     initArray(kernel1D, M);
+    cout << "kernel array: " << endl;
     showArray(kernel1D, M);
     cudaHostGetDevicePointer(&d_kernel1D, kernel1D, 0);
 
@@ -185,6 +179,7 @@ int main()
     int *d_input1D;
     cudaHostAlloc(&intput1D, P * sizeof(int), cudaHostAllocMapped);
     initArray(intput1D, P);
+    cout << endl << "input array: " << endl;
     showArray(intput1D, P);
     cudaHostGetDevicePointer(&d_input1D, intput1D, 0);
 
@@ -194,27 +189,23 @@ int main()
     cudaHostGetDevicePointer(&d_output1D, output1D, 0);
 
     int size = (P + M - 1) % 2 == 0 ? P + M - 1 : P + M;
-    cout << "size: " << size << endl;
     dim3 block1D(1);
+    // actually you better choose a 32 multiple of number
     dim3 thread1D(2, size / 2);
     int dynamicShareMemSize = (P + M) * sizeof(int);
     convolution1D<<<block1D,thread1D, dynamicShareMemSize >>>(d_input1D, P, d_kernel1D, M, d_output1D);
 
     cudaDeviceSynchronize();
+    cout << endl << "output array: " << endl;
     showArray(output1D, P + M - 1);
 
     cudaFreeHost(d_kernel1D); cudaFreeHost(d_input1D); cudaFreeHost(d_output1D);
 
     // for 2-dim convolution
+    cout << "--------------------" << endl;
     cout << "2D array convolution: " << endl;
-
-    hostMatrix kernel2D, input2D, output2D;
-    initMatrix(kernel2D, M, N); initMatrix(input2D, P, Q);
-    showMatrix(kernel2D, M, N);
-
-    deviceMatrix d_kernel2D, d_input2D, d_output2D;
-    d_kernel2D = kernel2D, d_input2D = input2D;
     
+    run();
 
     system("pause");
     return 0;

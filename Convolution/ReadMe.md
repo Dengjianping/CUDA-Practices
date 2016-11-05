@@ -30,3 +30,14 @@ cudaHostAlloc(&h_a, M * sizeof(int), cudaHostAllocMapped);
 /* initialize you data */
 cudaHostGetDevicePointer(&d_a, h_a, 0);
 ```
+
+## 4. If you use ```printf``` in kernel function, but it doesn't show anything, it might cause by launching kernel function failure. You can use the following piece of code to check out what happens to your kernel function.
+```cpp
+kernelFunction<<<blockSize, threadSize>>>();
+cudaError_t error = cudaDeviceSynchronize();
+if (error != cudaSuccess)
+{
+    // sometimes, you will get error info like: an illegal memory access was encountered
+    cout << cudaGetErrorString(error) << endl;
+}
+```
