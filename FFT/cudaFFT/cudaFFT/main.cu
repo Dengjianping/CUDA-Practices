@@ -33,6 +33,34 @@ complex<double> euler(int k, int n, int N)
 
 void dft1D(int *a, const int N);
 
+void recursiveFFT(double *input, complex<double> *output, int length)
+{
+    if (length == 1) return;
+    double evenInput[length/2]; //1, 3, 5...
+    double oddInput[length/2];
+    complex<double> evenOutput[length/2];
+    complex<double> oddOutput[length/2];
+    
+    for (int i = 0; i < length / 2; i++)
+    {
+        evenInput[i] = input[2*i];
+        oddInput[i] = input[2*i + 1];       
+    }
+    
+    for (int i = 0; i < length / 2; i++)
+    {
+        evenOutput[i] = evenInput[i]*euler(2*i, i, length/2);
+        oddOutput[i] = oddInput[i]*euler(2*i+1, i, length/2);
+    }
+    recursiveFFT(evenInput, evenOutput, length/2);
+    recursiveFFT(oddInput, oddOutput, length/2);
+    for (int i = 0; i < length / 2; i++)
+    {
+        output[2*i] = evenOutput[i];
+        output[2*i+1] = oddOutput[i];
+    }
+}
+
 int main()
 {
     const int N = 8;
