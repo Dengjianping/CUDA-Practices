@@ -36,10 +36,10 @@ void dft1D(int *a, const int N);
 void recursiveFFT(double *input, complex<double> *output, int length)
 {
     if (length == 1) return;
-    double evenInput[length/2]; //1, 3, 5...
-    double oddInput[length/2];
-    complex<double> evenOutput[length/2];
-    complex<double> oddOutput[length/2];
+    double *evenInput = new double[length/2]; //1, 3, 5...
+    double *oddInput = new double[length/2];
+    complex<double> *evenOutput = new complex<double>[length/2];
+    complex<double> *oddOutput = new complex<double>[length/2];
     
     for (int i = 0; i < length / 2; i++)
     {
@@ -59,6 +59,11 @@ void recursiveFFT(double *input, complex<double> *output, int length)
         output[2*i] = evenOutput[i];
         output[2*i+1] = oddOutput[i];
     }
+
+    delete[] evenInput;
+    delete[] oddInput;
+    delete[] evenOutput;
+    delete[] oddOutput;
 }
 
 int main()
