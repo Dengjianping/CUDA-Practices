@@ -4,11 +4,13 @@
 #include <cuda.h>
 
 #include <iostream>
+#include "kernel.h"
 
 using namespace std;
 
-extern "C"
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
+//extern "C"
+//cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
+//using namespace excuda;
 
 int main()
 {
@@ -18,7 +20,7 @@ int main()
     int c[arraySize] = { 0 };
 
     // Add vectors in parallel.
-    cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize);
+    cudaError_t cudaStatus = excuda::addWithCuda(c, a, b, arraySize);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "addWithCuda failed!");
         return 1;
